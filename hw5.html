@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Scene navigation</title>
+
+<script src="https://csc-vu.github.io/lib/three.js"></script>
+
+<script>
+    var scene, camera, renderer; // Three.js rendering basics
+    var canvas; // The canvas on which the image is rendered
+    var pyramid; // We need to make this global so the renderer can keep redrawing it
+
+    var xStep = 0.05;
+    var zStep = 0.05;
+
+    var randomX;
+    var randomZ;
+
+    // Create a camera, sitting on the positive z-axis.  The camera is not part of the scene
+    function createCamera() {
+        camera = new THREE.PerspectiveCamera(20, canvas.width/canvas.height, 1, 100);
+        camera.position.x = 10;
+        camera.position.y = 1;
+        camera.position.z = 100;
+
+        camera.lookAt(0,0,0); // call it once in the createCamera function
+    }
+
+    function createPyramid() {
+        // Set up the geometry for our pyramid
+        var pyramidGeom = new THREE.Geometry();
+    
+        // Set up pyramid vertices 
+        pyramidGeom.vertices = [  // array of Vector3 giving vertex coordinates
+            new THREE.Vector3( 1, 0, 1 ),    // vertex number 0
+            new THREE.Vector3( 1, 0, -1 ),   // vertex number 1
+            new THREE.Vector3( -1, 0, -1 ),  // vertex number 2
+            new THREE.Vector3( -1, 0, 1 ),   // vertex number 3
+            new THREE.Vector3( 0, 1, 0 )     // vertex number 4
+        ];
+        
+        // Set up pyramid (triangular) faces
+        pyramidGeom.faces = [  // array of Face3 giving the triangular faces
+            new THREE.Face3( 3, 2, 1),  // one half of the bottom face
+            new THREE.Face3( 3, 1, 0),  // second half of the bottom face
+            new THREE.Face3( 3, 0, 4),  // remaining faces are the four sides
+            new THREE.Face3( 0, 1, 4),
+            new THREE.Face3( 1, 2, 4),
+            new THREE.Face3( 2, 3, 4)
+        ];
+    
+        // Compute normals so we know which way is facing "out"
+        pyramidGeom.computeFaceNormals();
+    
+        // Set up pyramid material (one color per face)
+        var pyramidMat = [ // an array of Materials
+            new THREE.MeshBasicMaterial( {color: "brown"} ),    // bottom face
+            new THREE.MeshBasicMaterial( {color: "orange"} ),   // side faces
+            new THREE.MeshBasicMaterial( {color: "red"} ),  
+            new THREE.MeshBasicMaterial( {color: "purple"} ),  
+            new THREE.MeshBasicMaterial( {color: "pink"} ) 
+        ]; 
+
+        // Map materials to faces
+        pyramidGeom.faces[0].materialIndex = 0;
+        for (var i = 1; i <= 5; i++) {
+            pyramidGeom.faces[i].materialIndex = i-1;
+        }
+
+        // Create the pyramid using the geometry and materials we've set up
+        var pyramid = new THREE.Mesh(pyramidGeom, pyramidMat);
+        return pyramid;
+    }
+
+    function createStar() {
+        var starGeom = new THREE.SphereGeometry(15, 32, 16);
+        var material = new THREE.MeshBasicMaterial({color: 0xffffff});
+        var star = new THREE.Mesh(starGeom, material);
+        return star;
+    }
+
+    function createGround() {
+        // arguments are width along the x-axis, then width along y-axis
+        var geometry = new THREE.PlaneGeometry( 1000, 1000 );  // plane is 100 x 100 pixels  
+        var material = new THREE.MeshBasicMaterial({color: 0xede6d5, side: THREE.DoubleSide});
+        var plane = new THREE.Mesh( geometry, material );
+        scene.add( plane );
+
+        // TODO: rotate the plane so that it lies horizontal
+        plane.rotation.set(Math.PI/2, 0, 0);
+
+        // TODO: return the plane
+        return plane;
+    }
+
+    function genRandom(min, max) {
+        range = max - min;
+        var r = Math.random(min, max); // returns a number in [0,1], scale it to ground coordinates
+        return min + (r * range);
+    }
+
+
+    // Create the scene. This function is called once, as soon as the page loads.
+    // The renderer has already been created before this function is called
+    function createScene() {
+        
+        renderer.setClearColor(0x000000); // Set background color (0, or 0x000000, is black)
+        scene = new THREE.Scene(); // Create a new scene which we can add objects to
+    
+        //pyramid = createPyramid();
+        // transform the pyramid (scale/rotate/translate)
+        var ground = createGround();
+
+        //pyramid.rotation.set(0,-0.8,0);    
+
+        //scene.add(pyramid);
+        scene.add( ground );
+
+        for (var i = 0; i <= 250; i++) {
+            var pyramidNew = createPyramid();
+            pyramidNew.position.x = genRandom(-200, 100);
+            pyramidNew.position.z = genRandom(40, 100);
+            pyramidNew.scale.x = genRandom(0.75, 2);
+            pyramidNew.scale.y = genRandom(0.75, 2);
+            pyramidNew.scale.z = genRandom(0.75, 2);
+            pyramidNew.rotation.set(0, genRandom(0, 100), 0);
+            scene.add(pyramidNew);
+        }
+
+        for (var i = 0; i <= 1100; i++) {
+            var starNew = createStar();
+            starNew.position.x = genRandom(-400, 400);
+            starNew.position.y = genRandom(0, 22);
+            starNew.position.z = 4;
+            var sphereRandom = 0.005;
+            starNew.scale.x = sphereRandom;
+            starNew.scale.y = sphereRandom;
+            starNew.scale.z = sphereRandom;
+            scene.add(starNew);
+        }
+    }
+
+    // Render the scene. This is called for each frame of the animation
+    function render() {
+        renderer.render(scene, camera); // render the scene
+
+        // update the rotation angle here, to see all sides of the pyramid
+        // pyramid.rotation.y += 0.01;
+
+        // loop (request to re-render scene when screen is refreshed)
+        requestAnimationFrame( render );
+
+        // things that change go here
+
+            // xStep is the camera step in the x-direction (a small value - start with 0.05)
+            // zStep is the camera step in the z-direction
+
+        randomX = genRandom(0, 1);
+        randomZ = genRandom(0, 1);
+
+        if (camera.position.x > 100) {
+            xStep = xStep * (-1);
+        }
+
+        if (camera.position.z > 100) {
+            zStep = zStep * (-1);
+        }
+
+        if (camera.position.x < 0) {
+            xStep = xStep * (-1);
+        }
+
+        if (camera.position.z < 40) {
+            zStep = zStep * (-1);
+        }
+
+        if (randomX > 0.996) {
+            xStep = xStep * (-1);
+        }
+
+        if (randomZ > 0.996) {
+            zStep = zStep * (-1);
+        }
+
+        camera.position.x = camera.position.x + xStep;
+        camera.position.z = camera.position.z + zStep;
+
+        renderer.render(scene, camera);
+    }
+
+    //----------------------------------------------------------------------------------
+
+    // The main() function is called by the onload event when the document has loaded
+    function main() {
+        try {
+            canvas = document.getElementById("glcanvas");
+            renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true} );
+        }
+        catch (e) {
+            document.getElementById("canvas-holder").innerHTML = "<h3><b>WebGL is not available.</b><h3>";
+            return;
+        }
+    
+        // create camera
+        createCamera();
+        
+        // create scene 
+        createScene();
+
+        // render scene
+        render();
+    }
+
+</script>
+</head>
+
+<body onload="main()">
+<div id="canvas-holder">
+    <canvas id="glcanvas" width="600" height="300"></canvas>
+</div>
+
+
+</body></html>
